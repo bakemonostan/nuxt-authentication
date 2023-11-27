@@ -37,6 +37,14 @@ async function handleSubmit() {
       method: 'POST',
       body: form.value,
     })
+
+    navigateTo('/login')
+    form.value = {
+      email: '',
+      username: '',
+      password: '',
+    }
+
   } catch (error) {
     console.log(error)
   } finally {
