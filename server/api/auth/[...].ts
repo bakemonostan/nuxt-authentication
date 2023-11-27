@@ -1,8 +1,11 @@
 import { NuxtAuthHandler } from "#auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { User } from "~/server/models/User";
+import bcrypt from "bcrypt";
 
 export default NuxtAuthHandler({
   secret: useRuntimeConfig().authSecret,
+
   pages: {
     signIn: "/login",
   },
@@ -13,7 +16,30 @@ export default NuxtAuthHandler({
       name: "Credentials",
       credentials: {},
       async authorize(credentials: { username: string; password: string }) {
-        return null;
+        const user = await User.findOne({ username: credentials.username });
+        if (!user) {
+          throw createError({
+            statusCode: 401,
+            statusMessage: "Invalid credentials",
+          });
+        }
+
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isValid) {
+          throw createError({
+            statusCode: 401,
+            statusMessage: "Invalid credentials",
+          });
+        }
+
+        return {
+          ...user.toObject(),
+          password: undefined,
+        };
       },
     }),
   ],
@@ -31,7 +57,10 @@ export default NuxtAuthHandler({
       return token;
     },
     async session({ session, token }) {
-      session.user = token.user as any;
+      session.user = {
+        ...token,
+        ...session.user,
+      };
       return session;
     },
   },
